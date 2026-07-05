@@ -19,7 +19,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getAudios, removeAudio, type AudioItem } from "@/lib/store";
+import {
+  getAudios,
+  removeAudio,
+  onAudiosChanged,
+  type AudioItem,
+} from "@/lib/store";
 import { deleteAudioBlob } from "@/lib/audioStore";
 import {
   AlertDialog,
@@ -69,12 +74,8 @@ export function AppSidebar() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     refresh();
-    // 其它标签页改动 localStorage 时同步刷新
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === null || e.key.startsWith("podlisten:audios")) refresh();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    // 订阅 audios 变更：同页（上传成功即时同步）+ 跨标签页
+    return onAudiosChanged(refresh);
   }, [refresh]);
 
   const confirmDelete = useCallback(() => {
@@ -91,7 +92,7 @@ export function AppSidebar() {
   }, [pending, refresh]);
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
+    <aside className="flex h-full w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
       {/* 顶部 Logo / 回封面 */}
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="font-manrope text-lg font-semibold tracking-tight">

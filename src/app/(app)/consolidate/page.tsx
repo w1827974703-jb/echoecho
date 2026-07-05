@@ -12,16 +12,12 @@ import Link from "next/link";
 import { FileText, ListChecks, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuizPanel, type Question } from "@/components/QuizPanel";
 import { StoryPanel } from "@/components/StoryPanel";
 import { getVocab, type VocabItem } from "@/lib/store";
+import { useSessionState } from "@/lib/useSessionState";
 
 const MAX_WORDS = 10;
 
@@ -43,11 +39,18 @@ function pickWords(vocab: VocabItem[]): VocabItem[] {
 export default function ConsolidatePage() {
   const [vocab, setVocab] = useState<VocabItem[] | null>(null);
 
-  // quiz / story 各自的加载态与结果
+  // 加载态用普通 state（不跨页保留）；结果用 sessionStorage 持久化：
+  // 跳其它页再回来仍在、刷新仍在，直到手动重新生成或关闭标签页。
   const [quizLoading, setQuizLoading] = useState(false);
-  const [questions, setQuestions] = useState<Question[] | null>(null);
+  const [questions, setQuestions] = useSessionState<Question[] | null>(
+    "podlisten:consolidate:questions",
+    null,
+  );
   const [storyLoading, setStoryLoading] = useState(false);
-  const [story, setStory] = useState<StoryData | null>(null);
+  const [story, setStory] = useSessionState<StoryData | null>(
+    "podlisten:consolidate:story",
+    null,
+  );
 
   useEffect(() => {
     // localStorage 只能在客户端读，挂载后取一次是必要且正确的模式
@@ -143,92 +146,92 @@ export default function ConsolidatePage() {
           </CardContent>
         </Card>
       ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* 生成练习题（选择题） */}
-            <Card>
-              <CardHeader>
-                <ListChecks className="size-6 text-muted-foreground" />
-                <CardTitle className="mt-2 text-base">生成练习题</CardTitle>
-                <CardDescription>
-                  用生词出选择题，每词 1 题，附中文解析。
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  className="w-full"
-                  onClick={handleQuiz}
-                  disabled={quizLoading}
-                >
-                  {quizLoading ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      正在出题…
-                    </>
-                  ) : (
-                    "生成练习题"
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+        // 出题 / 短文分成两个互不干扰的 Tab；各自的操作区粘顶固定，下方结果滚动。
+        <Tabs defaultValue="quiz" className="gap-0">
+          <TabsList className="w-full">
+            <TabsTrigger value="quiz" className="flex-1">
+              <ListChecks className="size-4" />
+              练习题
+            </TabsTrigger>
+            <TabsTrigger value="story" className="flex-1">
+              <FileText className="size-4" />
+              情景短文
+            </TabsTrigger>
+          </TabsList>
 
-            {/* 生成情景短文 */}
-            <Card>
-              <CardHeader>
-                <FileText className="size-6 text-muted-foreground" />
-                <CardTitle className="mt-2 text-base">生成情景短文</CardTitle>
-                <CardDescription>
-                  把生词编进一段 4–6 句的自然英文短文，高亮目标词。
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  className="w-full"
-                  onClick={handleStory}
-                  disabled={storyLoading}
-                >
-                  {storyLoading ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      正在编写…
-                    </>
-                  ) : (
-                    "生成短文"
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+          {/* 练习题 Tab */}
+          <TabsContent value="quiz" className="mt-0">
+            {/* 操作区：粘顶固定，向下滑不移动 */}
+            <div className="sticky top-0 z-10 -mx-6 border-b bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <Button
+                className="w-full"
+                onClick={handleQuiz}
+                disabled={quizLoading}
+              >
+                {quizLoading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    正在出题…
+                  </>
+                ) : (
+                  "生成练习题"
+                )}
+              </Button>
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                用生词出选择题，每词 1 题、附中文解析 · 将用 {picked.length} 个词（优先「没记住/新」）。
+              </p>
+            </div>
 
-          <p className="text-center text-xs text-muted-foreground">
-            将用生词本里 {picked.length} 个词（优先「没记住/新」的词）。
-          </p>
+            <div className="pt-4">
+              {questions ? (
+                <QuizPanel questions={questions} onRegenerate={handleQuiz} />
+              ) : (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  点上方按钮，用生词本里的词生成一组选择题。
+                </p>
+              )}
+            </div>
+          </TabsContent>
 
-          {/* 练习题结果 */}
-          {questions && (
-            <section className="space-y-3">
-              <h2 className="text-sm font-medium text-muted-foreground">
-                练习题
-              </h2>
-              <QuizPanel questions={questions} onRegenerate={handleQuiz} />
-            </section>
-          )}
+          {/* 情景短文 Tab */}
+          <TabsContent value="story" className="mt-0">
+            {/* 操作区：粘顶固定 */}
+            <div className="sticky top-0 z-10 -mx-6 border-b bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <Button
+                className="w-full"
+                onClick={handleStory}
+                disabled={storyLoading}
+              >
+                {storyLoading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    正在编写…
+                  </>
+                ) : (
+                  "生成短文"
+                )}
+              </Button>
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                把生词编进 4–6 句英文短文、高亮目标词 · 将用 {picked.length} 个词（优先「没记住/新」）。
+              </p>
+            </div>
 
-          {/* 短文结果 */}
-          {story && (
-            <section className="space-y-3">
-              <h2 className="text-sm font-medium text-muted-foreground">
-                情景短文
-              </h2>
-              <StoryPanel
-                story={story.story}
-                targets={story.targets}
-                gloss={story.gloss}
-                onRegenerate={handleStory}
-              />
-            </section>
-          )}
-        </>
+            <div className="pt-4">
+              {story ? (
+                <StoryPanel
+                  story={story.story}
+                  targets={story.targets}
+                  gloss={story.gloss}
+                  onRegenerate={handleStory}
+                />
+              ) : (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  点上方按钮，用生词本里的词编一段情景短文。
+                </p>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       )}
     </main>
   );

@@ -70,6 +70,30 @@ export function genId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// 同页广播：localStorage 的原生 storage 事件只在「其它标签页」触发，
+// 同一页面内改动不会通知同页的其它组件（如侧边栏历史列表）。
+// 这里用自定义事件补上「同页同步」，audios 变更后派发，订阅方即时刷新。
+const AUDIOS_CHANGED_EVENT = "podlisten:audios-changed";
+
+function emitAudiosChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(AUDIOS_CHANGED_EVENT));
+}
+
+/** 订阅 audios 变更（同页 + 跨标签页）。返回取消订阅函数。 */
+export function onAudiosChanged(listener: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === null || e.key.startsWith(AUDIOS_KEY)) listener();
+  };
+  window.addEventListener(AUDIOS_CHANGED_EVENT, listener); // 同页
+  window.addEventListener("storage", onStorage); // 跨标签页
+  return () => {
+    window.removeEventListener(AUDIOS_CHANGED_EVENT, listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
 // ---------- Audios ----------
 
 export function getAudios(): AudioItem[] {
@@ -96,6 +120,7 @@ export function addAudio(input: {
   const list = getAudios();
   list.unshift(item);
   writeJson(AUDIOS_KEY, list);
+  emitAudiosChanged();
   return item;
 }
 
@@ -109,6 +134,7 @@ export function updateAudio(
   if (idx === -1) return undefined;
   list[idx] = { ...list[idx], ...patch };
   writeJson(AUDIOS_KEY, list);
+  emitAudiosChanged();
   return list[idx];
 }
 
@@ -117,6 +143,7 @@ export function removeAudio(id: string): void {
     AUDIOS_KEY,
     getAudios().filter((a) => a.id !== id),
   );
+  emitAudiosChanged();
 }
 
 // ---------- Vocab ----------

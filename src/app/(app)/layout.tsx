@@ -10,7 +10,10 @@ export default function AppLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-1">
-      <AppSidebar />
+      {/* 侧边栏固定：粘顶 + 视口高，页面滚动时不跟随移动 */}
+      <div className="sticky top-0 h-screen shrink-0">
+        <AppSidebar />
+      </div>
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
     </div>
   );
