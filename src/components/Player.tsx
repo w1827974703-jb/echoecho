@@ -22,6 +22,8 @@ interface PlayerProps {
   onTimeUpdate?: (currentTime: number) => void;
   /** 暴露 seek 能力给父组件。 */
   onReady?: (handle: PlayerHandle) => void;
+  /** 初始定位（秒）：元数据就绪后自动 seek 并播放，用于「重听原句」跳转。 */
+  startAt?: number;
   className?: string;
 }
 
@@ -32,11 +34,19 @@ function formatTime(sec: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function Player({ src, onTimeUpdate, onReady, className }: PlayerProps) {
+export function Player({
+  src,
+  onTimeUpdate,
+  onReady,
+  startAt,
+  className,
+}: PlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  // 记录已按 startAt 自动定位过，避免元数据重复加载时反复跳转
+  const seededRef = useRef(false);
 
   const clamp = useCallback(
     (t: number) => Math.min(Math.max(t, 0), duration || Number.MAX_SAFE_INTEGER),
@@ -90,7 +100,21 @@ export function Player({ src, onTimeUpdate, onReady, className }: PlayerProps) {
         ref={audioRef}
         src={src}
         preload="metadata"
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+        onLoadedMetadata={(e) => {
+          const audio = e.currentTarget;
+          setDuration(audio.duration || 0);
+          // 元数据就绪后按 startAt 定位并播放（只做一次）
+          if (
+            startAt != null &&
+            startAt > 0 &&
+            !seededRef.current
+          ) {
+            seededRef.current = true;
+            audio.currentTime = Math.min(startAt, audio.duration || startAt);
+            setCurrentTime(audio.currentTime);
+            void audio.play();
+          }
+        }}
         onTimeUpdate={(e) => {
           const t = e.currentTarget.currentTime;
           setCurrentTime(t);

@@ -6,6 +6,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Player, type PlayerHandle } from "@/components/Player";
@@ -19,6 +20,10 @@ export default function PlayPage({
   params: Promise<{ audioId: string }>;
 }) {
   const { audioId } = use(params);
+  // 「重听原句」跳转带的 ?t=秒数：元数据就绪后自动定位并播放
+  const searchParams = useSearchParams();
+  const tParam = searchParams.get("t");
+  const startAt = tParam != null ? Number(tParam) : undefined;
   const [audio, setAudio] = useState<AudioItem | null | undefined>(undefined);
   const [src, setSrc] = useState<string | null>(null);
   // 音频是否加载完成（用于区分"加载中"和"确实没有"）
@@ -92,6 +97,11 @@ export default function PlayPage({
           {src ? (
             <Player
               src={src}
+              startAt={
+                startAt != null && Number.isFinite(startAt)
+                  ? startAt
+                  : undefined
+              }
               onTimeUpdate={setCurrentTime}
               onReady={(handle) => {
                 playerRef.current = handle;
