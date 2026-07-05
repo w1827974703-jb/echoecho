@@ -1,11 +1,12 @@
 "use client";
 
-// app/review/page.tsx — 生词本 / 复习页（D1 占位）
-// 读取 localStorage 生词列表。卡片交互（记住/没记住、重听、AI 按钮）在 D5/D6 接入。
+// app/vocab/page.tsx — 生词本（D1 占位）
+// 读取 localStorage 生词列表。卡片交互（记住/没记住、重听）在 D5 接入。
+// AI 出题 / 情景短文属于「巩固」模块（/consolidate）。
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BookMarked } from "lucide-react";
+import { BookMarked } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getVocab, type VocabItem } from "@/lib/store";
@@ -19,19 +20,10 @@ export default function ReviewPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-8">
-      <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/upload">
-            <ArrowLeft className="size-4" />
-            返回
-          </Link>
-        </Button>
-      </div>
-
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">生词本</h1>
         <p className="text-sm text-muted-foreground">
-          点词记录的生词会出现在这里，之后可用 AI 出题与情景短文复习。
+          点词记录的生词会集中在这里；去「巩固」用 AI 出题与情景短文复习。
         </p>
       </header>
 

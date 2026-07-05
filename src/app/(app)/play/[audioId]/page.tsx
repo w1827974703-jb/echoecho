@@ -6,7 +6,6 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Player } from "@/components/Player";
@@ -54,15 +53,6 @@ export default function PlayPage({
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-8">
-      <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/upload">
-            <ArrowLeft className="size-4" />
-            返回
-          </Link>
-        </Button>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="truncate text-lg">{audio.name}</CardTitle>

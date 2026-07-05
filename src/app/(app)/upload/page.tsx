@@ -6,10 +6,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { FileAudio, Loader2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { addAudio } from "@/lib/store";
 
@@ -183,15 +181,10 @@ export default function UploadPage() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between">
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <FileAudio className="size-3.5" />
-          文件仅在本地处理，不会上传到任何第三方。
-        </p>
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/review">生词本</Link>
-        </Button>
-      </div>
+      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <FileAudio className="size-3.5" />
+        文件仅在本地处理，不会上传到任何第三方。
+      </p>
     </main>
   );
 }

@@ -46,7 +46,8 @@ app/
   page.tsx                 # 封面页
   upload/page.tsx          # 上传页
   play/[audioId]/page.tsx  # 播放页（核心）
-  review/page.tsx          # 生词本 / 复习页
+  vocab/page.tsx           # 生词本
+  consolidate/page.tsx     # 巩固（AI 出题 + 情景短文）
   api/
     transcribe/route.ts        # POST 发起异步转录
     transcribe/status/route.ts # GET 轮询转录状态

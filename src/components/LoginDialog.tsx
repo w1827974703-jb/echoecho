@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OriginButton } from "@/components/OriginButton";
 
 export function LoginDialog() {
   const router = useRouter();
@@ -35,12 +36,7 @@ export function LoginDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="rounded-2xl bg-white px-6 py-2 text-sm font-medium text-neutral-900 shadow-md transition-all hover:bg-white/90 active:scale-95"
-        >
-          进入
-        </button>
+        <OriginButton>进入</OriginButton>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
