@@ -65,6 +65,8 @@ export function AppSidebar() {
   }, []);
 
   useEffect(() => {
+    // 挂载标记（防 SSR 水合闪烁）+ 客户端读 localStorage，均需在 effect 内 setState
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     refresh();
     // 其它标签页改动 localStorage 时同步刷新

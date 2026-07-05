@@ -15,6 +15,8 @@ export default function ReviewPage() {
   const [vocab, setVocab] = useState<VocabItem[] | null>(null);
 
   useEffect(() => {
+    // localStorage 只能在客户端读，挂载后取一次是必要且正确的模式
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVocab(getVocab());
   }, []);
 

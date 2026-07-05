@@ -70,8 +70,10 @@ export default function UploadPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
-  // 记录最近一次选中的文件，供「重试」复用
+  // 记录最近一次选中的文件，供「重试」复用（在事件回调里读写 ref 是安全的）
   const lastFileRef = useRef<File | null>(null);
+  // 是否已有可重试的文件——用 state 驱动「重试」按钮的 disabled，避免渲染期读 ref
+  const [hasRetryFile, setHasRetryFile] = useState(false);
 
   const busy = phase === "uploading" || phase === "transcribing";
 
@@ -93,6 +95,7 @@ export default function UploadPage() {
   const startTranscription = useCallback(
     async (file: File) => {
       lastFileRef.current = file;
+      setHasRetryFile(true);
 
       // 1) 本地 store 建记录 + 把音频存 IndexedDB（持久，刷新/重开/点历史都能回放）
       const item = addAudio({
@@ -296,7 +299,7 @@ export default function UploadPage() {
             <p className="text-sm text-muted-foreground">
               可能是网络或服务波动，可点此重试。
             </p>
-            <Button onClick={handleRetry} disabled={!lastFileRef.current}>
+            <Button onClick={handleRetry} disabled={!hasRetryFile}>
               <RotateCw className="size-4" />
               点此重试
             </Button>

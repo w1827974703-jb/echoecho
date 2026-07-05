@@ -34,6 +34,7 @@ export default function PlayPage({
 
   useEffect(() => {
     // localStorage / IndexedDB 只能在客户端读
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAudio(getAudio(audioId) ?? null);
 
     let objectUrl: string | null = null;
