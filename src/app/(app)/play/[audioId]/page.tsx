@@ -1,14 +1,15 @@
 "use client";
 
-// app/play/[audioId]/page.tsx — 播放页（核心，D1 先跑通试听）
+// app/play/[audioId]/page.tsx — 播放页（核心）
 // 从 store 读 AudioItem，从 IndexedDB 取音频 Blob 生成对象 URL 播放。
-// 字幕三态 / 句级高亮 / 点词（D3）暂占位。
+// Player + SubtitleView 组合：播放进度驱动字幕高亮，点句 seek 回该句。
 
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Player } from "@/components/Player";
+import { Player, type PlayerHandle } from "@/components/Player";
+import { SubtitleView } from "@/components/SubtitleView";
 import { getAudio, type AudioItem } from "@/lib/store";
 import { getAudioBlob } from "@/lib/audioStore";
 
@@ -22,6 +23,14 @@ export default function PlayPage({
   const [src, setSrc] = useState<string | null>(null);
   // 音频是否加载完成（用于区分"加载中"和"确实没有"）
   const [srcLoaded, setSrcLoaded] = useState(false);
+  // 当前播放时间（秒），驱动字幕高亮
+  const [currentTime, setCurrentTime] = useState(0);
+  // Player 暴露的句柄，供点句 seek
+  const playerRef = useRef<PlayerHandle | null>(null);
+
+  const handleSeek = useCallback((time: number) => {
+    playerRef.current?.seek(time);
+  }, []);
 
   useEffect(() => {
     // localStorage / IndexedDB 只能在客户端读
@@ -80,7 +89,13 @@ export default function PlayPage({
         </CardHeader>
         <CardContent>
           {src ? (
-            <Player src={src} />
+            <Player
+              src={src}
+              onTimeUpdate={setCurrentTime}
+              onReady={(handle) => {
+                playerRef.current = handle;
+              }}
+            />
           ) : !srcLoaded ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               音频加载中…
@@ -100,17 +115,14 @@ export default function PlayPage({
         </CardContent>
       </Card>
 
-      {/* 字幕区（D3 接入）占位 */}
+      {/* 字幕：三态 + 句级高亮 + 点句 seek */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm text-muted-foreground">
-            字幕（待转录）
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            转录状态：{audio.transcriptStatus} · 字幕交互将在后续步骤接入。
-          </p>
+        <CardContent className="pt-6">
+          <SubtitleView
+            transcript={audio.transcript}
+            currentTime={currentTime}
+            onSeek={handleSeek}
+          />
         </CardContent>
       </Card>
     </main>
