@@ -13,8 +13,8 @@
 // 服务端 agent 保持纯粹。前端点词前先查缓存，未命中才请求本 Route。
 
 import { generateText, tool, stepCountIs } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
+import { qwenModel, parseLooseJson, generateJson } from "@/lib/qwen";
 
 export interface WordResult {
   word: string;
@@ -22,55 +22,10 @@ export interface WordResult {
   meaning: string; // 语境义（中文，贴合本句、简短）
 }
 
-// Qwen 走 OpenAI 兼容端点，与 Paraformer 同属百炼、共用 DASHSCOPE_API_KEY。
-const QWEN_BASE_URL =
-  process.env.QWEN_BASE_URL ||
-  "https://dashscope.aliyuncs.com/compatible-mode/v1";
-const QWEN_MODEL = process.env.QWEN_MODEL || "qwen-plus";
-
-function getApiKey(): string {
-  const key = process.env.DASHSCOPE_API_KEY;
-  if (!key) {
-    throw new Error(
-      "缺少 DASHSCOPE_API_KEY 环境变量（应配置在 .env.local，仅服务端可见）",
-    );
-  }
-  return key;
-}
-
-/**
- * 懒创建 Qwen 模型：避免模块加载期就读环境变量导致构建报错。
- *
- * 注意：必须用 provider.chat(model) 走 **Chat Completions** 接口。
- * @ai-sdk/openai v4 的默认 provider(model) 走的是 OpenAI 新的 Responses API，
- * 而 Qwen 的 OpenAI 兼容端点只实现了 Chat Completions —— 用默认路径做 function
- * calling 会报 AI_APICallError。这里统一走 .chat()。
- */
-function qwenModel() {
-  const provider = createOpenAI({
-    apiKey: getApiKey(),
-    baseURL: QWEN_BASE_URL,
-  });
-  return provider.chat(QWEN_MODEL);
-}
-
 // 工具体内部再调一次 Qwen 生成结构化内容（MVP 做法，见 CLAUDE.md §7.1）。
-// 用一个精简、无工具的 generateText，强约束「只输出 JSON」，再解析。
+// 强约束「只输出 JSON」，再解析。
 async function askJson<T>(prompt: string): Promise<T> {
-  const { text } = await generateText({
-    model: qwenModel(),
-    prompt,
-  });
-  return parseLooseJson<T>(text);
-}
-
-/** 从模型输出里稳健地抠出 JSON（容忍 ```json 代码块与前后多余文字）。 */
-function parseLooseJson<T>(text: string): T {
-  const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "");
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  const slice = start !== -1 && end !== -1 ? cleaned.slice(start, end + 1) : cleaned;
-  return JSON.parse(slice) as T;
+  return generateJson<T>({ prompt });
 }
 
 /**
