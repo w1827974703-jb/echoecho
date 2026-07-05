@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# UI 基线截图（本地开发参照，不入库）
+/.ui-baseline
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
