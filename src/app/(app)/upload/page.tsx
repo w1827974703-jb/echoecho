@@ -17,6 +17,7 @@ import {
   type Sentence,
   type TranscriptStatus,
 } from "@/lib/store";
+import { putAudioBlob } from "@/lib/audioStore";
 
 const MAX_DURATION_SEC = 15 * 60; // 15 分钟
 const ACCEPT_EXT = [".mp3", ".m4a"];
@@ -93,17 +94,16 @@ export default function UploadPage() {
     async (file: File) => {
       lastFileRef.current = file;
 
-      // 1) 本地 store 建记录 + 存对象 URL 供播放页试听
+      // 1) 本地 store 建记录 + 把音频存 IndexedDB（持久，刷新/重开/点历史都能回放）
       const item = addAudio({
         name: file.name,
         transcriptStatus: "processing",
         transcript: [],
       });
       try {
-        const objectUrl = URL.createObjectURL(file);
-        sessionStorage.setItem(`podlisten:src:${item.id}`, objectUrl);
+        await putAudioBlob(item.id, file);
       } catch {
-        // sessionStorage 不可用时忽略，播放页会提示
+        // IndexedDB 不可用时忽略，播放页会提示无法回放
       }
 
       // 2) 上传文件到 /api/transcribe（转 OSS + 提交 Paraformer）

@@ -1,7 +1,7 @@
 "use client";
 
 // app/play/[audioId]/page.tsx — 播放页（核心，D1 先跑通试听）
-// 从 store 读 AudioItem，从 sessionStorage 取本地对象 URL 播放。
+// 从 store 读 AudioItem，从 IndexedDB 取音频 Blob 生成对象 URL 播放。
 // 字幕三态 / 句级高亮 / 点词（D3）暂占位。
 
 import { use, useEffect, useState } from "react";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Player } from "@/components/Player";
 import { getAudio, type AudioItem } from "@/lib/store";
+import { getAudioBlob } from "@/lib/audioStore";
 
 export default function PlayPage({
   params,
@@ -19,15 +20,35 @@ export default function PlayPage({
   const { audioId } = use(params);
   const [audio, setAudio] = useState<AudioItem | null | undefined>(undefined);
   const [src, setSrc] = useState<string | null>(null);
+  // 音频是否加载完成（用于区分"加载中"和"确实没有"）
+  const [srcLoaded, setSrcLoaded] = useState(false);
 
   useEffect(() => {
-    // localStorage / sessionStorage 只能在客户端读
+    // localStorage / IndexedDB 只能在客户端读
     setAudio(getAudio(audioId) ?? null);
-    try {
-      setSrc(sessionStorage.getItem(`podlisten:src:${audioId}`));
-    } catch {
-      setSrc(null);
-    }
+
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const blob = await getAudioBlob(audioId);
+        if (cancelled) return;
+        if (blob) {
+          objectUrl = URL.createObjectURL(blob);
+          setSrc(objectUrl);
+        }
+      } catch {
+        // 读取失败当作无音频
+      } finally {
+        if (!cancelled) setSrcLoaded(true);
+      }
+    })();
+
+    // 卸载时释放对象 URL，避免内存泄漏
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [audioId]);
 
   // 加载中
@@ -60,9 +81,13 @@ export default function PlayPage({
         <CardContent>
           {src ? (
             <Player src={src} />
+          ) : !srcLoaded ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              音频加载中…
+            </p>
           ) : (
             <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              本地音频链接已失效（刷新或重开会话会丢失）。
+              找不到该音频文件（可能是在其它浏览器/设备上传的）。
               <br />
               请回到上传页重新选择文件。
               <div className="mt-4">

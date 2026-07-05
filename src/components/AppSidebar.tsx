@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getAudios, removeAudio, type AudioItem } from "@/lib/store";
+import { deleteAudioBlob } from "@/lib/audioStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,7 +77,10 @@ export function AppSidebar() {
 
   const confirmDelete = useCallback(() => {
     if (!pending) return;
-    removeAudio(pending.id);
+    const id = pending.id;
+    removeAudio(id);
+    // 同步清理 IndexedDB 里的音频 Blob，避免残留占空间
+    void deleteAudioBlob(id).catch(() => {});
     toast.success("已删除该音频", {
       description: "已记录的生词仍保留在生词本。",
     });
