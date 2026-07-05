@@ -33,6 +33,8 @@ export interface VocabItem {
 
 const AUDIOS_KEY = "podlisten:audios";
 const VOCAB_KEY = "podlisten:vocab";
+// 生词释义缓存（CLAUDE.md §7.1 缓存 hook）：以 word 为 key，命中直接返回不调模型，省钱省时。
+const WORD_CACHE_KEY = "podlisten:wordcache";
 
 /** SSR 安全：仅在浏览器环境返回 localStorage，否则 null。 */
 function ls(): Storage | null {
@@ -167,4 +169,21 @@ export function removeVocab(id: string): void {
     VOCAB_KEY,
     getVocab().filter((v) => v.id !== id),
   );
+}
+
+// ---------- 生词释义缓存（缓存 hook）----------
+
+/** 缓存里存的释义（不含句子/时间等实例信息，只存词本身的解释）。 */
+export type WordCacheEntry = Pick<VocabItem, "word" | "phonetic" | "meaning">;
+
+/** 以小写 word 为 key，语境义可能因句而异——这里缓存的是「该词的一次可复用解释」。 */
+export function getCachedWord(word: string): WordCacheEntry | undefined {
+  const map = readJson<Record<string, WordCacheEntry>>(WORD_CACHE_KEY, {});
+  return map[word.trim().toLowerCase()];
+}
+
+export function setCachedWord(entry: WordCacheEntry): void {
+  const map = readJson<Record<string, WordCacheEntry>>(WORD_CACHE_KEY, {});
+  map[entry.word.trim().toLowerCase()] = entry;
+  writeJson(WORD_CACHE_KEY, map);
 }

@@ -122,6 +122,7 @@ export default function PlayPage({
             transcript={audio.transcript}
             currentTime={currentTime}
             onSeek={handleSeek}
+            audioId={audioId}
           />
         </CardContent>
       </Card>
