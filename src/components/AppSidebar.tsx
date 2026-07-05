@@ -48,6 +48,8 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [audios, setAudios] = useState<AudioItem[]>([]);
+  // 挂载标记：首帧（SSR + 客户端首次）保持一致，避免 localStorage 引发 hydration mismatch
+  const [mounted, setMounted] = useState(false);
   // 待删除项（打开确认框时设置）
   const [pending, setPending] = useState<AudioItem | null>(null);
 
@@ -62,6 +64,7 @@ export function AppSidebar() {
   }, []);
 
   useEffect(() => {
+    setMounted(true);
     refresh();
     // 其它标签页改动 localStorage 时同步刷新
     const onStorage = (e: StorageEvent) => {
@@ -121,7 +124,7 @@ export function AppSidebar() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {audios.length === 0 ? (
+          {!mounted || audios.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-sidebar-foreground/40">
               还没有上传记录
             </p>

@@ -2,18 +2,27 @@
 
 // app/upload/page.tsx — 上传页
 // 拖拽/选择本地音频（mp3/m4a），前端校验格式 + 时长 ≤15 分钟，超限提示。
-// D1 阶段：不接后端，成功后写入 localStorage 并跳转播放页。
+// D2：上传 → /api/transcribe（转 OSS + Paraformer）→ 轮询状态 →
+//   done 写 transcript 到 localStorage 并跳播放页；failed 显示「点此重试」。
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileAudio, Loader2, UploadCloud } from "lucide-react";
+import { FileAudio, Loader2, RotateCw, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { addAudio } from "@/lib/store";
+import {
+  addAudio,
+  updateAudio,
+  type Sentence,
+  type TranscriptStatus,
+} from "@/lib/store";
 
 const MAX_DURATION_SEC = 15 * 60; // 15 分钟
 const ACCEPT_EXT = [".mp3", ".m4a"];
 const ACCEPT_ATTR = "audio/mpeg,audio/mp4,audio/x-m4a,.mp3,.m4a";
+const POLL_INTERVAL_MS = 3000;
+const POLL_MAX_TRIES = 100; // 3s * 100 = 5 分钟上限
 
 /** 校验扩展名（浏览器对 m4a 的 MIME 不稳定，以扩展名为准）。 */
 function hasAllowedExt(name: string): boolean {
@@ -45,11 +54,104 @@ function fmtDuration(sec: number): string {
   return `${m} 分 ${s} 秒`;
 }
 
+// 转录状态查询结果
+interface StatusResponse {
+  status: TranscriptStatus;
+  transcript?: Sentence[];
+  message?: string;
+}
+
+// 上传阶段：idle 空闲 / uploading 上传中 / transcribing 转录中 / failed 失败
+type Phase = "idle" | "uploading" | "transcribing" | "failed";
+
 export default function UploadPage() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [processing, setProcessing] = useState(false);
+  const [phase, setPhase] = useState<Phase>("idle");
+  // 记录最近一次选中的文件，供「重试」复用
+  const lastFileRef = useRef<File | null>(null);
+
+  const busy = phase === "uploading" || phase === "transcribing";
+
+  // 轮询转录状态直到 done / failed
+  const pollUntilDone = useCallback(
+    async (audioId: string): Promise<StatusResponse> => {
+      for (let i = 0; i < POLL_MAX_TRIES; i++) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+        const res = await fetch(`/api/transcribe/status?id=${audioId}`);
+        const data = (await res.json()) as StatusResponse;
+        if (data.status === "done" || data.status === "failed") return data;
+        // pending / processing：继续等
+      }
+      return { status: "failed", message: "转录超时" };
+    },
+    [],
+  );
+
+  const startTranscription = useCallback(
+    async (file: File) => {
+      lastFileRef.current = file;
+
+      // 1) 本地 store 建记录 + 存对象 URL 供播放页试听
+      const item = addAudio({
+        name: file.name,
+        transcriptStatus: "processing",
+        transcript: [],
+      });
+      try {
+        const objectUrl = URL.createObjectURL(file);
+        sessionStorage.setItem(`podlisten:src:${item.id}`, objectUrl);
+      } catch {
+        // sessionStorage 不可用时忽略，播放页会提示
+      }
+
+      // 2) 上传文件到 /api/transcribe（转 OSS + 提交 Paraformer）
+      setPhase("uploading");
+      let audioId: string;
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/transcribe", {
+          method: "POST",
+          body: form,
+        });
+        const data = (await res.json()) as {
+          audioId?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.audioId) {
+          throw new Error(data.error || "发起转录失败");
+        }
+        audioId = data.audioId;
+      } catch (e) {
+        updateAudio(item.id, { transcriptStatus: "failed" });
+        setPhase("failed");
+        toast.error(e instanceof Error ? e.message : "发起转录失败");
+        return;
+      }
+
+      // 3) 轮询转录状态
+      setPhase("transcribing");
+      const result = await pollUntilDone(audioId);
+
+      if (result.status === "done") {
+        // 4) 写入 transcript，跳播放页
+        updateAudio(item.id, {
+          transcriptStatus: "done",
+          transcript: result.transcript ?? [],
+        });
+        toast.success("转录完成，进入播放页");
+        setPhase("idle");
+        router.push(`/play/${item.id}`);
+      } else {
+        updateAudio(item.id, { transcriptStatus: "failed" });
+        setPhase("failed");
+        toast.error("转录失败", { description: result.message });
+      }
+    },
+    [pollUntilDone, router],
+  );
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -61,47 +163,34 @@ export default function UploadPage() {
         return;
       }
 
-      setProcessing(true);
+      // 2) 时长校验
+      let duration: number;
       try {
-        // 2) 时长校验
-        const duration = await readDuration(file);
-        if (!Number.isFinite(duration) || duration <= 0) {
-          toast.error("无法读取音频时长，请换一个文件试试");
-          return;
-        }
-        if (duration > MAX_DURATION_SEC) {
-          toast.error("音频超过 15 分钟上限", {
-            description: `当前时长约 ${fmtDuration(duration)}，请裁剪后再上传`,
-          });
-          return;
-        }
-
-        // 3) D1：写入 store（transcript 暂空，后端转录在 D2 接入）
-        const item = addAudio({
-          name: file.name,
-          transcriptStatus: "pending",
-          transcript: [],
-        });
-
-        // 4) 把本地文件对象 URL 暂存到 sessionStorage，供播放页 D1 试听
-        //    （对象 URL 仅当前会话有效，刷新/换页会失效，D2 起改用服务端音频）
-        try {
-          const objectUrl = URL.createObjectURL(file);
-          sessionStorage.setItem(`podlisten:src:${item.id}`, objectUrl);
-        } catch {
-          // sessionStorage 不可用时忽略，播放页会给出提示
-        }
-
-        toast.success("已添加，正在进入播放页");
-        router.push(`/play/${item.id}`);
+        duration = await readDuration(file);
       } catch {
         toast.error("读取音频失败，请重试");
-      } finally {
-        setProcessing(false);
+        return;
       }
+      if (!Number.isFinite(duration) || duration <= 0) {
+        toast.error("无法读取音频时长，请换一个文件试试");
+        return;
+      }
+      if (duration > MAX_DURATION_SEC) {
+        toast.error("音频超过 15 分钟上限", {
+          description: `当前时长约 ${fmtDuration(duration)}，请裁剪后再上传`,
+        });
+        return;
+      }
+
+      // 3) 通过校验，走上传 + 转录
+      await startTranscription(file);
     },
-    [router],
+    [startTranscription],
   );
+
+  const handleRetry = useCallback(() => {
+    if (lastFileRef.current) void startTranscription(lastFileRef.current);
+  }, [startTranscription]);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -127,17 +216,17 @@ export default function UploadPage() {
           <div
             role="button"
             tabIndex={0}
-            aria-disabled={processing}
-            onClick={() => !processing && inputRef.current?.click()}
+            aria-disabled={busy}
+            onClick={() => !busy && inputRef.current?.click()}
             onKeyDown={(e) => {
-              if ((e.key === "Enter" || e.key === " ") && !processing) {
+              if ((e.key === "Enter" || e.key === " ") && !busy) {
                 e.preventDefault();
                 inputRef.current?.click();
               }
             }}
             onDragOver={(e) => {
               e.preventDefault();
-              if (!processing) setDragging(true);
+              if (!busy) setDragging(true);
             }}
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
@@ -146,22 +235,26 @@ export default function UploadPage() {
               dragging
                 ? "border-primary bg-primary/5"
                 : "border-muted-foreground/25 hover:border-muted-foreground/40",
-              processing ? "pointer-events-none opacity-70" : "",
+              busy ? "pointer-events-none opacity-70" : "",
             ].join(" ")}
           >
-            {processing ? (
+            {busy ? (
               <Loader2 className="size-10 animate-spin text-muted-foreground" />
             ) : (
               <UploadCloud className="size-10 text-muted-foreground" />
             )}
             <div className="space-y-1">
               <p className="font-medium">
-                {processing
-                  ? "正在读取音频…"
-                  : "拖拽音频到此处，或点击选择文件"}
+                {phase === "uploading"
+                  ? "正在上传音频…"
+                  : phase === "transcribing"
+                    ? "正在转录（识别语音生成字幕）…"
+                    : "拖拽音频到此处，或点击选择文件"}
               </p>
               <p className="text-xs text-muted-foreground">
-                mp3 / m4a · 最长 15 分钟
+                {phase === "transcribing"
+                  ? "转录耗时与音频长度相关，请稍候，勿关闭页面"
+                  : "mp3 / m4a · 最长 15 分钟"}
               </p>
             </div>
 
@@ -181,9 +274,39 @@ export default function UploadPage() {
         </CardContent>
       </Card>
 
+      {/* 转录中：骨架屏，提示字幕正在生成 */}
+      {phase === "transcribing" && (
+        <Card>
+          <CardContent className="space-y-3 py-6">
+            <p className="text-sm text-muted-foreground">字幕生成中…</p>
+            <div className="space-y-2">
+              <div className="h-4 w-full animate-pulse rounded bg-muted" />
+              <div className="h-4 w-5/6 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-4/6 animate-pulse rounded bg-muted" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 转录失败：重试 */}
+      {phase === "failed" && (
+        <Card className="border-destructive/40">
+          <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+            <p className="font-medium text-destructive">转录失败</p>
+            <p className="text-sm text-muted-foreground">
+              可能是网络或服务波动，可点此重试。
+            </p>
+            <Button onClick={handleRetry} disabled={!lastFileRef.current}>
+              <RotateCw className="size-4" />
+              点此重试
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <FileAudio className="size-3.5" />
-        文件仅在本地处理，不会上传到任何第三方。
+        音频会临时上传用于转录，完成后自动删除。
       </p>
     </main>
   );

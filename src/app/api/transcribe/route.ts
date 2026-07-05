@@ -12,9 +12,12 @@ import { NextResponse } from "next/server";
 import { genId } from "@/lib/store";
 import { submitTranscription, pollUntilDone } from "@/lib/dashscope";
 import { setTask, updateTask } from "@/lib/transcribeStore";
+import { uploadAudio, deleteAudio } from "@/lib/oss";
 
 export async function POST(req: Request) {
   let fileUrl: string | undefined;
+  // multipart 上传时记录 OSS 对象 key，转录结束后清理
+  let ossObjectKey: string | undefined;
 
   const contentType = req.headers.get("content-type") ?? "";
   try {
@@ -22,19 +25,28 @@ export async function POST(req: Request) {
       const body = (await req.json()) as { fileUrl?: string };
       fileUrl = body.fileUrl;
     } else if (contentType.includes("multipart/form-data")) {
-      // 第二步接入：从 form 里取文件 → 中转成公网 URL。此处暂未实现。
-      return NextResponse.json(
-        { error: "文件直传中转尚未接入，请先用 { fileUrl } 提交公网音频地址" },
-        { status: 501 },
-      );
+      // 本地上传：取文件 → 传 OSS → 拿签名 URL 交给 Paraformer
+      const form = await req.formData();
+      const file = form.get("file");
+      if (!(file instanceof File)) {
+        return NextResponse.json(
+          { error: "未收到音频文件（form 字段名应为 file）" },
+          { status: 400 },
+        );
+      }
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const uploaded = await uploadAudio(buffer, file.name);
+      fileUrl = uploaded.signedUrl;
+      ossObjectKey = uploaded.objectKey;
     }
-  } catch {
-    return NextResponse.json({ error: "请求体解析失败" }, { status: 400 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "请求体解析失败";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   if (!fileUrl || !/^https?:\/\//.test(fileUrl)) {
     return NextResponse.json(
-      { error: "缺少有效的公网音频 URL（fileUrl）" },
+      { error: "缺少有效的音频来源（上传文件或 fileUrl）" },
       { status: 400 },
     );
   }
@@ -45,6 +57,8 @@ export async function POST(req: Request) {
   try {
     taskId = await submitTranscription(fileUrl);
   } catch (e) {
+    // 提交失败：清理已上传的 OSS 对象，避免残留
+    if (ossObjectKey) void deleteAudio(ossObjectKey).catch(() => {});
     const msg = e instanceof Error ? e.message : "提交转录任务失败";
     return NextResponse.json({ error: msg }, { status: 502 });
   }
@@ -66,6 +80,9 @@ export async function POST(req: Request) {
         status: "failed",
         message: e instanceof Error ? e.message : "转录轮询异常",
       });
+    } finally {
+      // 转录结束（无论成败）：清理 OSS 上的临时音频
+      if (ossObjectKey) void deleteAudio(ossObjectKey).catch(() => {});
     }
   })();
 
