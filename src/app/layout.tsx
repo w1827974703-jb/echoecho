@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Manrope, Noto_Serif_SC } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Hedvig_Letters_Sans,
+  Manrope,
+  Noto_Serif_SC,
+} from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -27,6 +33,14 @@ const notoSerifSC = Noto_Serif_SC({
   subsets: ["latin"],
 });
 
+// 内页英文正文/标题字体：Hedvig Letters Sans（仅 Regular 一个字重）。
+// 仅内页使用（封面页保持 Manrope，不受影响）。
+const hedvigLettersSans = Hedvig_Letters_Sans({
+  variable: "--font-hedvig",
+  weight: "400",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "播客精听 · 听力优先的英文播客精听工具",
   description: "上传英文音频，边听边按需看字幕，点词记录，AI 出题复习。",
@@ -40,7 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} ${notoSerifSC.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} ${notoSerifSC.variable} ${hedvigLettersSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}

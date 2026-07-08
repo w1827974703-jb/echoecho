@@ -112,8 +112,8 @@ export function AppSidebar() {
               className={cn(
                 "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[var(--shadow-lift)]"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
               )}
             >
               <Icon className="size-4" />
@@ -146,8 +146,8 @@ export function AppSidebar() {
                       className={cn(
                         "flex items-center gap-2 rounded-lg py-2 pl-3 pr-9 text-sm transition-colors",
                         active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[var(--shadow-lift)]"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                       )}
                     >
                       <Music className="size-3.5 shrink-0 opacity-60" />

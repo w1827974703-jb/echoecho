@@ -58,7 +58,7 @@ export function ReviewCard({ item, onStatusChange }: ReviewCardProps) {
         {!flipped ? (
           // 正面：只有 word，逼一下主动回忆
           <div className="flex min-h-28 flex-col items-center justify-center gap-1 text-center">
-            <span className="text-2xl font-semibold tracking-tight">
+            <span className="font-en text-2xl tracking-tight">
               {item.word}
             </span>
             <span className="text-xs text-muted-foreground">
@@ -69,7 +69,7 @@ export function ReviewCard({ item, onStatusChange }: ReviewCardProps) {
           // 背面：音标 + 语境义 + 原句
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-lg font-semibold">{item.word}</span>
+              <span className="font-en text-lg">{item.word}</span>
               {item.phonetic && (
                 <span className="font-mono text-sm text-muted-foreground">
                   {item.phonetic}
@@ -78,7 +78,7 @@ export function ReviewCard({ item, onStatusChange }: ReviewCardProps) {
             </div>
             <p className="text-sm leading-relaxed">{item.meaning}</p>
             {item.sentence && (
-              <p className="border-l-2 border-muted pl-3 text-sm italic text-muted-foreground">
+              <p className="font-en border-l-2 border-muted pl-3 text-sm italic text-muted-foreground">
                 “{item.sentence}”
               </p>
             )}

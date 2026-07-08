@@ -71,7 +71,7 @@ export function QuizPanel({ questions, onRegenerate }: QuizPanelProps) {
         return (
           <Card key={qi}>
             <CardHeader>
-              <CardTitle className="text-sm font-medium leading-relaxed">
+              <CardTitle className="font-en text-sm font-medium leading-relaxed">
                 <span className="mr-2 text-muted-foreground">Q{qi + 1}.</span>
                 {q.stem}
               </CardTitle>
@@ -114,7 +114,7 @@ export function QuizPanel({ questions, onRegenerate }: QuizPanelProps) {
                         String.fromCharCode(65 + oi)
                       )}
                     </span>
-                    <span>{opt}</span>
+                    <span className="font-en">{opt}</span>
                   </button>
                 );
               })}

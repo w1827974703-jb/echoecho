@@ -94,7 +94,7 @@ function TargetWord({ word, sentence }: { word: string; sentence: string }) {
         ) : entry ? (
           <div className="flex flex-col gap-1.5">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-base font-semibold">{entry.word}</span>
+              <span className="font-en text-base font-semibold">{entry.word}</span>
               {entry.phonetic && (
                 <span className="text-xs text-muted-foreground">
                   {entry.phonetic}
@@ -150,7 +150,7 @@ export function StoryPanel({
   return (
     <div className="flex flex-col gap-4">
       {/* 短文正文 */}
-      <div className="rounded-xl border p-5 text-base leading-loose">
+      <div className="font-en rounded-xl border p-5 text-base leading-loose">
         {segments.map((seg, i) =>
           seg.target ? (
             <TargetWord key={i} word={seg.text} sentence={story} />

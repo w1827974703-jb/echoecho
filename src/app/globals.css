@@ -12,6 +12,7 @@
   --font-heading: var(--font-sans);
   --font-manrope: var(--font-manrope-src);
   --font-noto-serif: var(--font-noto-serif-sc);
+  --font-hedvig: var(--font-hedvig);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -50,39 +51,44 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * 内页配色（亮色）——「淡米色底 + 暖橙/冷蓝氛围 + 软阴影 + 白卡选中」。
+ * 参照配色示意稿：中性色微染暖（hue≈90-100，极低色度），不再是纯灰白。
+ * 仅调 token，布局/功能不变；封面页有自己的配色，不受这里影响。
+ */
 :root {
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --card: oklch(0.997 0.003 100); /* 卡片：近白微暖 */
+  --card-foreground: oklch(0.28 0.008 90);
+  --popover: oklch(0.997 0.003 100);
+  --popover-foreground: oklch(0.28 0.008 90);
+  --primary: oklch(0.27 0.01 90); /* 主按钮：暖近黑 */
+  --primary-foreground: oklch(0.99 0.004 100);
+  --secondary: oklch(0.955 0.008 96);
+  --secondary-foreground: oklch(0.27 0.01 90);
+  --muted: oklch(0.955 0.008 96); /* Tabs 轨道 / 弱底 */
+  --muted-foreground: oklch(0.51 0.01 90);
+  --accent: oklch(0.955 0.008 96);
+  --accent-foreground: oklch(0.27 0.01 90);
+  --destructive: oklch(0.577 0.2 27);
+  --border: oklch(0.925 0.006 100); /* 边框：极淡暖，几乎靠阴影分隔 */
+  --input: oklch(0.925 0.006 100);
+  --ring: oklch(0.72 0.05 80);
+  --chart-1: oklch(0.72 0.11 62);
+  --chart-2: oklch(0.6 0.09 250);
+  --chart-3: oklch(0.55 0.08 150);
+  --chart-4: oklch(0.65 0.12 40);
+  --chart-5: oklch(0.5 0.09 280);
+  --radius: 0.75rem; /* 略大圆角，贴近示意稿 */
+  --sidebar: oklch(0.972 0.007 100); /* 侧栏：淡米色稍深，分出层次 */
+  --sidebar-foreground: oklch(0.28 0.008 90);
+  --sidebar-primary: oklch(0.27 0.01 90);
+  --sidebar-primary-foreground: oklch(0.99 0.004 100);
+  --sidebar-accent: oklch(0.997 0.003 100); /* 选中态：白卡提亮（配阴影，见下方 base 层） */
+  --sidebar-accent-foreground: oklch(0.28 0.008 90);
+  --sidebar-border: oklch(0.925 0.006 100);
+  --sidebar-ring: oklch(0.72 0.05 80);
+  --background: oklch(0.988 0.006 100); /* 内容底：淡米色 */
+  --foreground: oklch(0.28 0.008 90);
 }
 
 .dark {
@@ -120,6 +126,13 @@
 }
 
 @layer base {
+  :root {
+    /* 软阴影：扩散、柔、暖 —— 卡片与「白卡选中态」用，替代硬灰边框（配色示意稿风格）。 */
+    --shadow-card: 0 1px 2px oklch(0.5 0.03 60 / 0.04),
+      0 8px 24px -14px oklch(0.5 0.04 55 / 0.16);
+    --shadow-lift: 0 1px 2px oklch(0.5 0.03 60 / 0.05),
+      0 6px 16px -10px oklch(0.5 0.04 55 / 0.18);
+  }
   * {
     @apply border-border outline-ring/50;
   }
@@ -128,5 +141,35 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* 卡片：软阴影 + 极淡 ring，边框几乎不可见，靠阴影分隔（示意稿观感）。 */
+  [data-slot="card"] {
+    box-shadow: var(--shadow-card);
+    --tw-ring-color: color-mix(in oklch, var(--foreground) 5%, transparent);
+  }
+}
+
+@layer components {
+  /* 内页内容区氛围渐变：右上暖橙 + 左下冷蓝，叠在淡米底上。仅内页用，封面页不受影响。 */
+  .app-content {
+    background-image:
+      radial-gradient(
+        75% 55% at 100% 0%,
+        oklch(0.88 0.06 52 / 0.5),
+        transparent 62%
+      ),
+      radial-gradient(
+        70% 60% at 0% 100%,
+        oklch(0.86 0.045 262 / 0.42),
+        transparent 60%
+      );
+    background-attachment: fixed;
+  }
+
+  /* 英文文本字体：Hedvig Letters Sans（仅内页英文用；中文保持思源/系统）。 */
+  .font-en {
+    font-family: var(--font-hedvig), var(--font-sans), ui-sans-serif, system-ui,
+      sans-serif;
   }
 }

@@ -125,7 +125,7 @@ export default function VocabPage() {
                 <Card>
                   <CardHeader className="flex flex-row items-start justify-between gap-2">
                     <CardTitle className="flex items-baseline gap-2 text-base">
-                      {v.word}
+                      <span className="font-en">{v.word}</span>
                       {v.phonetic && (
                         <span className="font-mono text-sm text-muted-foreground">
                           {v.phonetic}
@@ -163,7 +163,7 @@ export default function VocabPage() {
                   <CardContent className="space-y-1.5">
                     <p className="text-sm">{v.meaning}</p>
                     {v.sentence && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-en text-sm text-muted-foreground">
                         “{v.sentence}”
                       </p>
                     )}

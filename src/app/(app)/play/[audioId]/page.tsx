@@ -91,7 +91,7 @@ export default function PlayPage({
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-8">
       <Card>
         <CardHeader>
-          <CardTitle className="truncate text-lg">{audio.name}</CardTitle>
+          <CardTitle className="font-en truncate text-lg">{audio.name}</CardTitle>
         </CardHeader>
         <CardContent>
           {src ? (

@@ -133,7 +133,7 @@ export function WordPopover({
         ) : entry ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-base font-semibold">{entry.word}</span>
+              <span className="font-en text-base font-semibold">{entry.word}</span>
               {entry.phonetic && (
                 <span className="text-xs text-muted-foreground">
                   {entry.phonetic}

@@ -14,7 +14,7 @@ export default function AppLayout({
       <div className="sticky top-0 h-screen shrink-0">
         <AppSidebar />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+      <div className="app-content flex min-w-0 flex-1 flex-col">{children}</div>
     </div>
   );
 }

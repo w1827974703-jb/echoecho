@@ -178,7 +178,7 @@ export function SubtitleView({
           {shownIndex >= 0 ? (
             <div className="flex flex-col items-center gap-3">
               {/* 整句可点词；点词不触发跳转，跳转用下方按钮 */}
-              <p className="text-center text-lg leading-relaxed">
+              <p className="font-en text-center text-lg leading-relaxed">
                 <ClickableSentence
                   text={transcript[shownIndex].text}
                   time={transcript[shownIndex].start}
@@ -226,7 +226,7 @@ export function SubtitleView({
                 ▶
               </button>
               {/* 可点词 */}
-              <p className="flex-1">
+              <p className="font-en flex-1">
                 <ClickableSentence
                   text={s.text}
                   time={s.start}
